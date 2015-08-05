@@ -42,9 +42,8 @@ if ( !class_exists( 'SharedCount' ) ) {
 			// SharedCount section
 			$wp_customize->add_section( 'sharedcount', array(
 				'title' => 'SharedCount', // Not localized: branding
-				'priority' => 0,
+				'priority' => 300,
 				'capability' => 'edit_theme_options',
-				'description' => __( '', 'sharedcount' ),
 			));
 
 			// SharedCount endpoint
