@@ -84,7 +84,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 
 			$url = apply_filters( 'sharedcount_url', $url );
 
-			echo self::get_total_count( $url );
+			echo apply_filters( 'sharedcount', self::get_total_count( $url ) );
 		}
 
 		/**
