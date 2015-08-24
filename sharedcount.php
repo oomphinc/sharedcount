@@ -93,7 +93,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 		static function get_total_count( $url ) {
 			$counts = self::get_counts( $url );
 
-			return $counts['total'];
+			return apply_filters( 'sharedcount_count', $counts['total'], $url );
 		}
 
 		/**
@@ -182,7 +182,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 
 				wp_cache_set( $cache_key, $counts, 'sharedcount' );
 
-				return $counts;
+				return apply_filters( 'sharedcount_counts', $counts, $url );
 			}
 		}
 	}
