@@ -119,7 +119,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 			}
 
 			// Append with a global incrementor, which can get reset manually
-			$global_incrementor .= wp_cache_get( 'inc', 'sharedcount' );
+			$global_incrementor = wp_cache_get( 'inc', 'sharedcount' );
 
 			if( $global_incrementor === false ) {
 				$global_incrementor = md5( rand() );
