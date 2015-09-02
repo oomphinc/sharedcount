@@ -132,7 +132,10 @@ if ( !class_exists( 'SharedCount' ) ) {
 
 		/**
 		 * Get the shared count for a particular URL. Cache for as long as
-		 * possible.
+		 * possible. Return an array for each service, or an empty array
+		 * if it was not possible.
+		 *
+		 * @return array
 		 */
 		static function get_counts( $url ) {
 			$cache_key = self::cache_key( $url );
@@ -151,6 +154,13 @@ if ( !class_exists( 'SharedCount' ) ) {
 			) );
 
 			$request = wp_remote_get( 'http://'. $options['endpoint'] . '/?url=' . urlencode( $url ) . '&apikey=' . $options['key'], array( 'timeout' => 10000 ) );
+
+			// Save this failure for 2 minutes
+			if ( is_wp_error( $request ) ) {
+				wp_cache_set( $cache_key, array(), 'sharedcount', 120 );
+
+				return array();
+			}
 
 			if( isset( $request['response']['code'] ) && $request['response']['code'] !== 200 ) {
 				wp_cache_set( $cache_key, 0, 'sharedcount' );
