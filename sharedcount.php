@@ -82,8 +82,6 @@ if ( !class_exists( 'SharedCount' ) ) {
 				$url = home_url( $GLOBALS['wp']->request );
 			}
 
-			$url = apply_filters( 'sharedcount_url', $url );
-
 			echo apply_filters( 'sharedcount', self::get_total_count( $url ) );
 		}
 
@@ -140,6 +138,8 @@ if ( !class_exists( 'SharedCount' ) ) {
 		static function get_counts( $url ) {
 			$cache_key = self::cache_key( $url );
 
+			$url = apply_filters( 'sharedcount_url', $url );
+
 			// Rely on the object cache to save these counts
 			$cached = wp_cache_get( $cache_key, 'sharedcount' );
 
@@ -153,7 +153,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 				'fb_mode' => 'total'
 			) );
 
-			$request = wp_remote_get( 'http://'. $options['endpoint'] . '/?url=' . urlencode( $url ) . '&apikey=' . $options['key'], array( 'timeout' => 10000 ) );
+			$request = wp_remote_get( 'http://'. $options['endpoint'] . '/?url=' . urlencode( $url ) . '&apikey=' . $options['key'], array( 'timeout' => 100 ) );
 
 			// Save this failure for 2 minutes
 			if ( is_wp_error( $request ) ) {
@@ -195,6 +195,59 @@ if ( !class_exists( 'SharedCount' ) ) {
 				return apply_filters( 'sharedcount_counts', $counts, $url );
 			}
 		}
+	}
+
+	if ( class_exists( 'WP_CLI' ) ) {
+		class SharedCount_CLI extends WP_CLI_Command {
+			/**
+			 * Pull sharedcount for all posts
+			 */
+			function fetch_counts() {
+				$query_args = array(
+					'meta_query' => array(
+						'relation' => 'OR',
+						array(
+							'key' => 'sharedcount_updated',
+							'type' => 'DATETIME',
+							// Anything over an hour old
+							'value' => gmdate( 'Y-m-d H:i:s', time() - 3600 ),
+							'compare' => '<'
+						),
+						array(
+							'key' => 'sharedcount_updated',
+							'compare' => 'NOT EXISTS'
+						)
+					),
+					'posts_per_page' => 50,
+					'paged' => 1,
+				);
+
+				do {
+					$query = new WP_Query( apply_filters( 'sharedcount_update_query', $query_args ) );
+
+					foreach ( $query->posts as $post ) {
+						$counts = SharedCount::get_counts( get_permalink( $post ) );
+
+						if ( ! empty( $counts ) ) {
+							$count = (int) $counts['total'];
+							$current = (int) get_post_meta( $post->ID, 'sharedcount_count', true );
+
+							WP_CLI::line( "Share count for post $post->ID `$post->post_title`: $count (current: $current)" );
+
+							if ( $current < $count ) {
+								update_post_meta( $post->ID, 'sharedcount_count', $count );
+							}
+						}
+
+						update_post_meta( $post->ID, 'sharedcount_updated', current_time( 'mysql', true ) );
+					}
+
+					$query_args['paged']++;
+				} while( $query->max_num_pages > $query_args['paged'] );
+			}
+		}
+
+		WP_CLI::add_command( 'sharedcount', 'SharedCount_CLI' );
 	}
 
 	SharedCount::init();
