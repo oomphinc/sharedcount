@@ -208,16 +208,18 @@ if ( !class_exists( 'SharedCount' ) ) {
 			 * : Process only every N of M attachments, formatted as N/M. Useful for doing large batches quickly, optimizing the CPU. Wrap in a shell script to iterate 0 < N < M and reap the benefits.
 			 *
 			 */
-			function fetch_counts() {
+			function fetch_counts( $args, $assoc_args = array() ) {
 				// Clean the output buffer. Not sure why this exists.
 				ob_end_clean();
+
+				$parallelize =
 
 				// Either every single post...
 				$every_n = 0;
 				$of_m = 1;
 
 				// Or a set of them to parallelize pages
-				if ( !empty( $parallelize ) && preg_match( '#^(\d+)/(\d+)$#', $parallelize, $matches ) ) {
+				if ( !empty( $assoc_args['parallelize'] ) && preg_match( '#^(\d+)/(\d+)$#', $assoc_args['parallelize'], $matches ) ) {
 					$every_n = (int) $matches[1];
 					$of_m = (int) $matches[2];
 				}
