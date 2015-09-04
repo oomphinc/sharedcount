@@ -201,8 +201,27 @@ if ( !class_exists( 'SharedCount' ) ) {
 		class SharedCount_CLI extends WP_CLI_Command {
 			/**
 			 * Pull sharedcount for all posts
+			 *
+			 * ## OPTIONS
+			 *
+			 * [--parallelize=<n_of_m>]
+			 * : Process only every N of M attachments, formatted as N/M. Useful for doing large batches quickly, optimizing the CPU. Wrap in a shell script to iterate 0 < N < M and reap the benefits.
+			 *
 			 */
 			function fetch_counts() {
+				// Clean the output buffer. Not sure why this exists.
+				ob_end_clean();
+
+				// Either every single post...
+				$every_n = 0;
+				$of_m = 1;
+
+				// Or a set of them to parallelize pages
+				if ( !empty( $parallelize ) && preg_match( '#^(\d+)/(\d+)$#', $parallelize, $matches ) ) {
+					$every_n = (int) $matches[1];
+					$of_m = (int) $matches[2];
+				}
+
 				$query_args = array(
 					'meta_query' => array(
 						'relation' => 'OR',
@@ -219,9 +238,8 @@ if ( !class_exists( 'SharedCount' ) ) {
 						)
 					),
 					'posts_per_page' => 50,
-					'paged' => 1,
+					'paged' => $every_n,
 				);
-
 				do {
 					$query = new WP_Query( apply_filters( 'sharedcount_update_query', $query_args ) );
 
@@ -242,7 +260,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 						update_post_meta( $post->ID, 'sharedcount_updated', current_time( 'mysql', true ) );
 					}
 
-					$query_args['paged']++;
+					$query_args['paged'] += $of_m;
 				} while( $query->max_num_pages > $query_args['paged'] );
 			}
 		}
