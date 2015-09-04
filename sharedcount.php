@@ -72,21 +72,22 @@ if ( !class_exists( 'SharedCount' ) ) {
 		}
 
 		/**
-		 * Render the shared count.
+		 * Render the shared count for the current or specified post. Pull it from
+		 * postmeta 'sharedcount_count'.
 		 *
 		 * @action sharedcount_render
 		 */
-		static function render_count( $url = '' ) {
-			// Default to requested URL
-			if( empty( $url ) ) {
-				$url = home_url( $GLOBALS['wp']->request );
-			}
+		static function render_count( $post = null ) {
+			$post = get_post( $post );
 
-			echo apply_filters( 'sharedcount', self::get_total_count( $url ) );
+			// If a post is found but no URL is given, check meta on that post
+			$count = get_post_meta( $post->ID, 'sharedcount_count', true );
+
+			echo apply_filters( 'sharedcount', $count, $post );
 		}
 
 		/**
-		 * Get the total count number
+		 * Get the total count number from a URL. Apply sharedcount_count filter to result.
 		 */
 		static function get_total_count( $url ) {
 			$counts = self::get_counts( $url );
@@ -129,10 +130,41 @@ if ( !class_exists( 'SharedCount' ) ) {
 		}
 
 		/**
-		 * Get the shared count for a particular URL. Cache for as long as
+		 * Get the shared count for a particular post. Cache for as long as
+		 * possible, look up otherwise. Return an array for each service, or an
+		 * empty array if it was not possible.
+		 *
+		 * @param WP_Post $post
+		 * @return array
+		 */
+		static function get_post_counts( $post ) {
+			$url = get_permalink( $post );
+
+			$current = get_post_meta( $post->ID, 'sharedcount_count', true );
+			$updated = get_post_meta( $post->ID, 'sharedcount_updated', true );
+
+			// If never updated or updated more than an hour ago, get it
+			if ( !$updated || ( time() - strtotime( $updated ) ) < 3600 ) {
+				$count = self::get_total_count( get_permalink( $post ) );
+
+				// Only update if larger
+				if ( $count > $current ) {
+					update_post_meta( $post->ID, 'sharedcount_count', $count );
+				}
+			}
+			else {
+				$count = $current;
+			}
+
+			return $count;
+		}
+
+		/**
+		 * Get the shared count for a particular URL. Cache for as long as possible
 		 * possible. Return an array for each service, or an empty array
 		 * if it was not possible.
 		 *
+		 * @param WP_Post $post
 		 * @return array
 		 */
 		static function get_counts( $url ) {
@@ -212,8 +244,6 @@ if ( !class_exists( 'SharedCount' ) ) {
 				// Clean the output buffer. Not sure why this exists.
 				ob_end_clean();
 
-				$parallelize =
-
 				// Either every single post...
 				$every_n = 0;
 				$of_m = 1;
@@ -246,18 +276,23 @@ if ( !class_exists( 'SharedCount' ) ) {
 					$query = new WP_Query( apply_filters( 'sharedcount_update_query', $query_args ) );
 
 					foreach ( $query->posts as $post ) {
+						$current = (int) get_post_meta( $post->ID, 'sharedcount_count', true );
+						WP_CLI::out( "Getting sharecount for $post->ID `$post->post_title` (current: $current) ... " );
+
 						$counts = SharedCount::get_counts( get_permalink( $post ) );
 
 						if ( ! empty( $counts ) ) {
 							$count = (int) $counts['total'];
-							$current = (int) get_post_meta( $post->ID, 'sharedcount_count', true );
 
-							WP_CLI::line( "Share count for post $post->ID `$post->post_title`: $count (current: $current)" );
+							WP_CLI::out( $count . '... ' );
 
 							if ( $current < $count ) {
+								WP_CLI::out( ' Updating' );
 								update_post_meta( $post->ID, 'sharedcount_count', $count );
 							}
 						}
+
+						WP_CLI::line();
 
 						update_post_meta( $post->ID, 'sharedcount_updated', current_time( 'mysql', true ) );
 					}
