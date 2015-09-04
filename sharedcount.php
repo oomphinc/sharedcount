@@ -80,6 +80,10 @@ if ( !class_exists( 'SharedCount' ) ) {
 		static function render_count( $post = null ) {
 			$post = get_post( $post );
 
+			if ( ! $post ) {
+				return;
+			}
+
 			// If a post is found but no URL is given, check meta on that post
 			$count = get_post_meta( $post->ID, 'sharedcount_count', true );
 
