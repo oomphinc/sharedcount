@@ -155,6 +155,8 @@ if ( !class_exists( 'SharedCount' ) ) {
 				if ( $count > $current ) {
 					update_post_meta( $post->ID, 'sharedcount_count', $count );
 				}
+
+				update_post_meta( $post->ID, 'sharedcount_updated', current_time( 'mysql', true ) );
 			}
 			else {
 				$count = $current;
