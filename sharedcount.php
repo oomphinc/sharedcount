@@ -46,7 +46,7 @@ if ( !class_exists( 'SharedCount' ) ) {
 		 * Schedule job for fetching counts.
 		 */
 		static function sharedcount_activate() {
-			$recurrance = apply_filters( 'sharedcount_fetch_recurrance', 'twicedaily' );
+			$recurrance = apply_filters( 'sharedcount_fetch_recurrance', 'hourly' );
 
 			wp_schedule_event( time(), $recurrance, 'sharedcount_fetch_counts' );
 		}
@@ -72,8 +72,8 @@ if ( !class_exists( 'SharedCount' ) ) {
 					array(
 						'key' => 'sharedcount_updated',
 						'type' => 'DATETIME',
-						// Anything over an hour old
-						'value' => gmdate( 'Y-m-d H:i:s', time() - 3600 ),
+						// Anything over 12 hours old
+						'value' => gmdate( 'Y-m-d H:i:s', time() - 43200 ),
 						'compare' => '<'
 					),
 					array(
