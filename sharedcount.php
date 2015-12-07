@@ -34,8 +34,73 @@ if ( !class_exists( 'SharedCount' ) ) {
 		static function init() {
 			$c = get_called_class();
 
+			register_deactivation_hook( __FILE__, array( $c, 'sharedcount_deactivate' ) );
+
+			// Schedule job for fetching counts.
+			$recurrance = apply_filters( 'sharedcount_fetch_recurrance', 'hourly' );
+			if ( ! wp_next_scheduled( 'sharedcount_fetch_counts' ) ) {
+				wp_schedule_event( current_time( 'timestamp' ), $recurrance, 'sharedcount_fetch_counts' );
+			}
+
 			add_action( 'customize_register', array( $c, 'customize_register' ) );
 			add_action( 'sharedcount_render', array( $c, 'render_count' ) );
+			add_action( 'sharedcount_fetch_counts', array( $c, 'fetch_counts' ) );
+		}
+
+		/**
+		 * Unschedule job for fetching counts.
+		 */
+		static function sharedcount_deactivate() {
+			wp_clear_scheduled_hook( 'sharedcount_fetch_counts' );
+		}
+
+		/**
+		 * Fetch Sharedcount counts.
+		 */
+		static function fetch_counts() {
+			//Process only every N of M attachments. Defaults to every single post.
+			$every_n = (int) apply_filters( 'sharedcount_every_n', 0 );
+			$of_m = (int) apply_filters( 'sharedcount_of_m', 1 );
+
+			$query_args = array(
+				'meta_query' => array(
+					'relation' => 'OR',
+					array(
+						'key' => 'sharedcount_updated',
+						'type' => 'DATETIME',
+						// Anything over 12 hours old
+						'value' => gmdate( 'Y-m-d H:i:s', time() - 43200 ),
+						'compare' => '<'
+					),
+					array(
+						'key' => 'sharedcount_updated',
+						'compare' => 'NOT EXISTS'
+					)
+				),
+				'posts_per_page' => 50,
+				'paged' => $every_n,
+			);
+			do {
+				$query = new WP_Query( apply_filters( 'sharedcount_update_query', $query_args ) );
+
+				foreach ( $query->posts as $post ) {
+					$current = (int) get_post_meta( $post->ID, 'sharedcount_count', true );
+
+					$counts = SharedCount::get_counts( get_permalink( $post ) );
+
+					if ( ! empty( $counts ) ) {
+						$count = (int) $counts['total'];
+
+						if ( $current < $count ) {
+							update_post_meta( $post->ID, 'sharedcount_count', $count );
+						}
+					}
+
+					update_post_meta( $post->ID, 'sharedcount_updated', current_time( 'mysql', true ) );
+				}
+
+				$query_args['paged'] += $of_m;
+			} while( $query->max_num_pages > $query_args['paged'] );
 		}
 
 		static function customize_register( $wp_customize ) {
