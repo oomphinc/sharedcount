@@ -34,21 +34,17 @@ if ( !class_exists( 'SharedCount' ) ) {
 		static function init() {
 			$c = get_called_class();
 
-			register_activation_hook( __FILE__, array( $c, 'sharedcount_activate' ) );
 			register_deactivation_hook( __FILE__, array( $c, 'sharedcount_deactivate' ) );
+
+			// Schedule job for fetching counts.
+			$recurrance = apply_filters( 'sharedcount_fetch_recurrance', 'hourly' );
+			if ( ! wp_next_scheduled( 'sharedcount_fetch_counts' ) ) {
+				wp_schedule_event( current_time( 'timestamp' ), $recurrance, 'sharedcount_fetch_counts' );
+			}
 
 			add_action( 'customize_register', array( $c, 'customize_register' ) );
 			add_action( 'sharedcount_render', array( $c, 'render_count' ) );
 			add_action( 'sharedcount_fetch_counts', array( $c, 'fetch_counts' ) );
-		}
-
-		/**
-		 * Schedule job for fetching counts.
-		 */
-		static function sharedcount_activate() {
-			$recurrance = apply_filters( 'sharedcount_fetch_recurrance', 'hourly' );
-
-			wp_schedule_event( time(), $recurrance, 'sharedcount_fetch_counts' );
 		}
 
 		/**
