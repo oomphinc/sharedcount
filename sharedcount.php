@@ -5,7 +5,7 @@
  * Description: Pull, cache, and expose share counts from sharedcount.com.
  * Author: Ben Doherty @ Oomph, Inc
  * Author URI: http://www.oomphinc.com
- * Version: 0.1
+ * Version: 0.1.0
  * Text Domain: sharedcount
  * Domain Path: languages
  * Credits: This plugin is a distillation of the sharedcount integration found in the mashshare plugin. HT to René Hermenau.

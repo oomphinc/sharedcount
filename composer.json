@@ -1,0 +1,12 @@
+{
+    "name": "oomphinc/sharedcount",
+    "description": "Simple integration with Sharedcount API to gather the number of shares for a piece of content.",
+    "type": "wordpress-plugin",
+    "authors": [
+        {
+            "name": "Ben Doherty",
+            "email": "ben@thinkoomph.com"
+        }
+    ],
+    "require": {}
+}
